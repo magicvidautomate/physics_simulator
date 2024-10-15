@@ -6,6 +6,14 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
+// Define physics presets
+const physicsPresets = {
+  normal: { gravity: 0.2, speedIncrease: 0.5, maxSpeed: 20 },
+  lowGravity: { gravity: 0.05, speedIncrease: 0.3, maxSpeed: 15 },
+  highBounce: { gravity: 0.3, speedIncrease: 0.8, maxSpeed: 25 },
+  chaotic: { gravity: 0.4, speedIncrease: 1, maxSpeed: 30 },
+};
+
 export function BouncingRingSimulation() {
   const canvasRef = useRef(null);
   const positionRef = useRef({ x: 0, y: 0 });
@@ -19,15 +27,19 @@ export function BouncingRingSimulation() {
   const [traceColor, setTraceColor] = useState('#00ff00');
   const [soundType, setSoundType] = useState('sine');
   const [soundFrequency, setSoundFrequency] = useState(220);
+  const [bgColor1, setBgColor1] = useState('#4a0e4e');
+  const [bgColor2, setBgColor2] = useState('#81236b');
+  const [bgColor3, setBgColor3] = useState('#2c699a');
+  const [physicsPreset, setPhysicsPreset] = useState('normal');
 
   // Constants
   const BORDER_RADIUS = 350;
   const RING_RADIUS = 35;
   const INITIAL_SPEED = 4;
-  const SPEED_INCREASE = 0.5;
-  const MAX_SPEED = 20;
   const COLLISION_MARGIN = 2;
-  const GRAVITY = 0.2;
+
+  // Use the selected physics preset
+  const { gravity, speedIncrease, maxSpeed } = physicsPresets[physicsPreset];
 
   const initAudioContext = () => {
     audioContextRef.current = new (window.AudioContext || window.webkitAudioContext)();
@@ -74,9 +86,9 @@ export function BouncingRingSimulation() {
       canvas.width / 2, canvas.height / 2, 0,
       canvas.width / 2, canvas.height / 2, BORDER_RADIUS
     );
-    gradient.addColorStop(0, '#4a0e4e');
-    gradient.addColorStop(0.5, '#81236b');
-    gradient.addColorStop(1, '#2c699a');
+    gradient.addColorStop(0, bgColor1);
+    gradient.addColorStop(0.5, bgColor2);
+    gradient.addColorStop(1, bgColor3);
 
     ctx.beginPath();
     ctx.arc(canvas.width / 2, canvas.height / 2, BORDER_RADIUS, 0, 2 * Math.PI);
@@ -116,8 +128,8 @@ export function BouncingRingSimulation() {
     const animate = () => {
       if (!isRunning || isComplete) return;
 
-      // Apply gravity
-      velocityRef.current.y += GRAVITY;
+      // Apply gravity from the current physics preset
+      velocityRef.current.y += gravity;
 
       // Update position
       positionRef.current.x += velocityRef.current.x;
@@ -167,9 +179,9 @@ export function BouncingRingSimulation() {
           y: velocityRef.current.y - 2 * dotProduct * normal.y
         };
 
-        // Increase speed
+        // Increase speed using the current physics preset
         const currentSpeed = Math.sqrt(newVelocity.x ** 2 + newVelocity.y ** 2);
-        const increasedSpeed = Math.min(currentSpeed + SPEED_INCREASE, MAX_SPEED);
+        const increasedSpeed = Math.min(currentSpeed + speedIncrease, maxSpeed);
         const scaleFactor = increasedSpeed / currentSpeed;
 
         velocityRef.current = {
@@ -200,7 +212,7 @@ export function BouncingRingSimulation() {
     return () => {
       cancelAnimationFrame(animationFrameId);
     };
-  }, [isRunning, isComplete, traceColor, soundType, soundFrequency]);
+  }, [isRunning, isComplete, traceColor, soundType, soundFrequency, bgColor1, bgColor2, bgColor3, physicsPreset]);
 
   const toggleSimulation = () => {
     if (!audioContextRef.current) {
@@ -224,63 +236,132 @@ export function BouncingRingSimulation() {
     setSoundFrequency(Number(event.target.value));
   };
 
+  const handleBgColorChange = (index, event) => {
+    const color = event.target.value;
+    if (index === 1) setBgColor1(color);
+    else if (index === 2) setBgColor2(color);
+    else if (index === 3) setBgColor3(color);
+  };
+
+  const handlePhysicsPresetChange = (value) => {
+    setPhysicsPreset(value);
+    resetSimulation();
+  };
+
   return (
-    <div className="flex flex-col items-center justify-center h-screen bg-gray-900 text-white">
-      <canvas
-        ref={canvasRef}
-        width={BORDER_RADIUS * 2 + 20}
-        height={BORDER_RADIUS * 2 + 20}
-        className="mb-4"
-      />
-      <div className="flex items-center mb-4 space-x-4">
-        <div>
-          <Label htmlFor="color-picker" className="mr-2">Trace Color:</Label>
-          <Input
-            id="color-picker"
-            type="color"
-            value={traceColor}
-            onChange={handleColorChange}
-            className="w-12 h-8"
+    <div className="flex flex-col items-center justify-center min-h-screen bg-gray-900 text-white p-4">
+      <div className="flex flex-col md:flex-row items-start justify-center w-full max-w-7xl gap-8">
+        <div className="flex flex-col items-center">
+          <canvas
+            ref={canvasRef}
+            width={BORDER_RADIUS * 2 + 20}
+            height={BORDER_RADIUS * 2 + 20}
+            className="mb-4"
           />
+          <Button onClick={toggleSimulation} className="mb-4">
+            {isComplete ? 'Restart' : isRunning ? 'Reset' : 'Start'} Simulation
+          </Button>
         </div>
-        <div>
-          <Label htmlFor="sound-type" className="mr-2">Sound Type:</Label>
-          <Select value={soundType} onValueChange={handleSoundTypeChange}>
-            <SelectTrigger id="sound-type" className="w-32">
-              <SelectValue placeholder="Select sound type" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="sine">Sine</SelectItem>
-              <SelectItem value="square">Square</SelectItem>
-              <SelectItem value="sawtooth">Sawtooth</SelectItem>
-              <SelectItem value="triangle">Triangle</SelectItem>
-            </SelectContent>
-          </Select>
+        <div className="flex flex-col space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <Label htmlFor="color-picker" className="mr-2">Trace Color:</Label>
+              <Input
+                id="color-picker"
+                type="color"
+                value={traceColor}
+                onChange={handleColorChange}
+                className="w-12 h-8"
+              />
+            </div>
+            <div>
+              <Label htmlFor="sound-type" className="mr-2">Sound Type:</Label>
+              <Select value={soundType} onValueChange={handleSoundTypeChange}>
+                <SelectTrigger id="sound-type" className="w-32">
+                  <SelectValue placeholder="Select sound type" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="sine">Sine</SelectItem>
+                  <SelectItem value="square">Square</SelectItem>
+                  <SelectItem value="sawtooth">Sawtooth</SelectItem>
+                  <SelectItem value="triangle">Triangle</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label htmlFor="frequency" className="mr-2">Frequency (Hz):</Label>
+              <Input
+                id="frequency"
+                type="number"
+                value={soundFrequency}
+                onChange={handleFrequencyChange}
+                min={20}
+                max={2000}
+                className="w-20"
+              />
+            </div>
+            <div>
+              <Label htmlFor="physics-preset" className="mr-2">Physics Preset:</Label>
+              <Select value={physicsPreset} onValueChange={handlePhysicsPresetChange}>
+                <SelectTrigger id="physics-preset" className="w-32">
+                  <SelectValue placeholder="Select physics" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="normal">Normal</SelectItem>
+                  <SelectItem value="lowGravity">Low Gravity</SelectItem>
+                  <SelectItem value="highBounce">High Bounce</SelectItem>
+                  <SelectItem value="chaotic">Chaotic</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <div className="grid grid-cols-3 gap-4">
+            <div>
+              <Label htmlFor="bg-color-1" className="mr-2">BG Color 1:</Label>
+              <Input
+                id="bg-color-1"
+                type="color"
+                value={bgColor1}
+                onChange={(e) => handleBgColorChange(1, e)}
+                className="w-12 h-8"
+              />
+            </div>
+            <div>
+              <Label htmlFor="bg-color-2" className="mr-2">BG Color 2:</Label>
+              <Input
+                id="bg-color-2"
+                type="color"
+                value={bgColor2}
+                onChange={(e) => handleBgColorChange(2, e)}
+                className="w-12 h-8"
+              />
+            </div>
+            <div>
+              <Label htmlFor="bg-color-3" className="mr-2">BG Color 3:</Label>
+              <Input
+                id="bg-color-3"
+                type="color"
+                value={bgColor3}
+                onChange={(e) => handleBgColorChange(3, e)}
+                className="w-12 h-8"
+              />
+            </div>
+          </div>
+          <div className="text-left bg-gray-800 p-4 rounded-lg">
+            <h3 className="text-xl font-bold mb-2">Simulation Stats</h3>
+            <p>Ring radius: {RING_RADIUS} px</p>
+            <p>Border radius: {BORDER_RADIUS} px</p>
+            <p>Initial ring speed: {INITIAL_SPEED} px/frame</p>
+            <p>Current speed: {speed.toFixed(2)} px/frame</p>
+            <p>Bounce count: {bounceCount}</p>
+            <p>Clear progress: {(clearProgress * 100).toFixed(2)}%</p>
+            <p>Current physics: {physicsPreset}</p>
+            <p>Gravity: {gravity}</p>
+            <p>Speed increase: {speedIncrease}</p>
+            <p>Max speed: {maxSpeed}</p>
+            {isComplete && <p className="text-green-500 font-bold">Simulation Complete!</p>}
+          </div>
         </div>
-        <div>
-          <Label htmlFor="frequency" className="mr-2">Frequency (Hz):</Label>
-          <Input
-            id="frequency"
-            type="number"
-            value={soundFrequency}
-            onChange={handleFrequencyChange}
-            min={20}
-            max={2000}
-            className="w-20"
-          />
-        </div>
-      </div>
-      <Button onClick={toggleSimulation} className="mb-4">
-        {isComplete ? 'Restart' : isRunning ? 'Reset' : 'Start'} Simulation
-      </Button>
-      <div className="text-left">
-        <p>Ring radius: {RING_RADIUS} px</p>
-        <p>Border radius: {BORDER_RADIUS} px</p>
-        <p>Initial ring speed: {INITIAL_SPEED} px/frame</p>
-        <p>Current speed: {speed.toFixed(2)} px/frame</p>
-        <p>Bounce count: {bounceCount}</p>
-        <p>Clear progress: {(clearProgress * 100).toFixed(2)}%</p>
-        {isComplete && <p className="text-green-500 font-bold">Simulation Complete!</p>}
       </div>
     </div>
   );
