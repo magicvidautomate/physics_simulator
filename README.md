@@ -4,6 +4,9 @@
 
 The Bouncing Ring Simulation is an interactive web application built with Next.js and React. It simulates a ring bouncing within a circular border, creating a visually engaging and interactive experience.
 
+<img width="1662" alt="Screenshot 2024-10-14 at 23 08 04" src="https://github.com/user-attachments/assets/78499e56-747e-4b8a-9412-5f13a877ad71">
+
+
 ## Features
 
 - Dynamic ring movement with gravity and collision detection
