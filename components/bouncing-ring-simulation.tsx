@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Slider } from "@/components/ui/slider";
 
 // Define physics presets
 const physicsPresets = {
@@ -31,10 +32,10 @@ export function BouncingRingSimulation() {
   const [bgColor2, setBgColor2] = useState('#81236b');
   const [bgColor3, setBgColor3] = useState('#2c699a');
   const [physicsPreset, setPhysicsPreset] = useState('normal');
+  const [ringRadius, setRingRadius] = useState(35);
 
   // Constants
   const BORDER_RADIUS = 350;
-  const RING_RADIUS = 35;
   const INITIAL_SPEED = 4;
   const COLLISION_MARGIN = 2;
 
@@ -65,9 +66,10 @@ export function BouncingRingSimulation() {
 
   const resetSimulation = () => {
     const canvas = canvasRef.current;
+    if (!canvas) return;
     positionRef.current = {
       x: canvas.width / 2,
-      y: canvas.height / 2 - (BORDER_RADIUS - RING_RADIUS - COLLISION_MARGIN)
+      y: canvas.height / 2 - (BORDER_RADIUS - ringRadius - COLLISION_MARGIN)
     };
     velocityRef.current = { x: INITIAL_SPEED, y: 0 };
     setBounceCount(0);
@@ -142,7 +144,7 @@ export function BouncingRingSimulation() {
       ctx.clip();
       ctx.globalCompositeOperation = 'destination-out';
       ctx.beginPath();
-      ctx.arc(positionRef.current.x, positionRef.current.y, RING_RADIUS, 0, 2 * Math.PI);
+      ctx.arc(positionRef.current.x, positionRef.current.y, ringRadius, 0, 2 * Math.PI);
       ctx.fill();
       ctx.restore();
 
@@ -157,7 +159,7 @@ export function BouncingRingSimulation() {
 
       // Draw bouncing ring
       ctx.beginPath();
-      ctx.arc(positionRef.current.x, positionRef.current.y, RING_RADIUS, 0, 2 * Math.PI);
+      ctx.arc(positionRef.current.x, positionRef.current.y, ringRadius, 0, 2 * Math.PI);
       ctx.strokeStyle = traceColor;
       ctx.lineWidth = 3;
       ctx.stroke();
@@ -167,7 +169,7 @@ export function BouncingRingSimulation() {
       const dy = positionRef.current.y - canvas.height / 2;
       const distance = Math.sqrt(dx * dx + dy * dy);
 
-      if (distance + RING_RADIUS + COLLISION_MARGIN > BORDER_RADIUS) {
+      if (distance + ringRadius + COLLISION_MARGIN > BORDER_RADIUS) {
         // Play bounce sound
         playBounceSound();
 
@@ -212,7 +214,7 @@ export function BouncingRingSimulation() {
     return () => {
       cancelAnimationFrame(animationFrameId);
     };
-  }, [isRunning, isComplete, traceColor, soundType, soundFrequency, bgColor1, bgColor2, bgColor3, physicsPreset]);
+  }, [isRunning, isComplete, traceColor, soundType, soundFrequency, bgColor1, bgColor2, bgColor3, physicsPreset, ringRadius]);
 
   const toggleSimulation = () => {
     if (!audioContextRef.current) {
@@ -245,6 +247,11 @@ export function BouncingRingSimulation() {
 
   const handlePhysicsPresetChange = (value) => {
     setPhysicsPreset(value);
+    resetSimulation();
+  };
+
+  const handleRingSizeChange = (value: number) => {
+    setRingRadius(value);
     resetSimulation();
   };
 
@@ -347,9 +354,22 @@ export function BouncingRingSimulation() {
               />
             </div>
           </div>
+          <div>
+            <Label htmlFor="ring-size" className="mr-2">Ring Size:</Label>
+            <Slider
+              id="ring-size"
+              min={10}
+              max={100}
+              step={1}
+              value={ringRadius}
+              onChange={handleRingSizeChange}
+              className="w-48"
+            />
+            <span className="ml-2">{ringRadius}px</span>
+          </div>
           <div className="text-left bg-gray-800 p-4 rounded-lg">
             <h3 className="text-xl font-bold mb-2">Simulation Stats</h3>
-            <p>Ring radius: {RING_RADIUS} px</p>
+            <p>Ring radius: {ringRadius} px</p>
             <p>Border radius: {BORDER_RADIUS} px</p>
             <p>Initial ring speed: {INITIAL_SPEED} px/frame</p>
             <p>Current speed: {speed.toFixed(2)} px/frame</p>
